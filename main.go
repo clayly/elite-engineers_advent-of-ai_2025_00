@@ -61,22 +61,34 @@ func main() {
 
 	basicPrompt := fmt.Sprintf(
 		`
-After the word Z_REQ I will send you a request.
+This is dialog (designated as Z_DIALOG) between me (the user, designated as Z_USER) and you (the AI, designated as Z_AI).
 
-You response should contain only text, strictly compatible with Z_RSP.
+Z_AI can only do two things in Z_DIALOG:
+1. Z_AI can give an answer (designated as Z_RSP), which will finish Z_DIALOG.
+1. Z_AI can collect data from Z_USER with clarifying questions (designated as Z_COLLECT_DATA) in order to qualitatively fill out Z_RSP.
 
-Z_RSP is completely defined by Z_RSP_FORMAT and Z_RSP_TEMPLATE.
+Z_AI main and only goal in this dialog is to fill Z_RSP, format of which is described below.
 
-Z_RSP_FORMAT is specified between the words Z_RSP_FORM_START and Z_RSP_FORM_END.
-Z_RSPF_FORMAT is totally defines syntax format of Z_RSP and used for automatic deserialization of Z_RSP.
+Z_USER do two things in Z_DIALOG:
+1. Z_USER can provide additional data with clarifying answers (designated as Z_PROVIDE_DATA). 
+1. Z_USER determines direction of Z_DIALOG and therefore content of Z_RSP with his first Z_PROVIDE_DATA.
 
-Z_RSP_TEMPLATE is specified between the words Z_RSP_TEMP_START and Z_RSP_TEMP_END.
-Z_RSP_TEMPLATE is totally defines logic format of Z_RSP and used for automatic deserialization of Z_RSP.
+All Z_COLLECT_DATA placed between strings Z_COLLECT_DATA_START_{N} and Z_COLLECT_DATA_END_{N}, where {N} is number of this Z_COLLECT_DATA in Z_DIALOG. 
+All Z_PROVIDE_DATA placed between strings Z_PROVIDE_DATA_START_{N} and Z_PROVIDE_DATA_END_{N}, where {N} is number of this Z_PROVIDE_DATA in Z_DIALOG. 
 
-Do not use any other symbols or words before or after Z_RSP, which may interfere with deserialization of Z_RSP_FORMAT and Z_RSP_TEMPLATE.
+Z_AI finishes Z_DIALOG with Z_RSP in two occasions:
+1. When Z_AI decides that enough data is provided.
+2. When Z_AI decides that Z_USER is not providing relative data anymore in Z_PROVIDE_DATA.
 
-Be as brief as possible, do not engage in any reasoning in response, only fill the Z_RSP structure according to Z_RSP_FORMAT and Z_RSP_TEMPLATE,
-placing in the appropriate keys or arrays those values that correspond to the response.
+When Z_AI decides to give answer, Z_AI response contains only text, strictly compatible with Z_RSP:
+1. Z_RSP format is completely defined by Z_RSP_FORMAT and Z_RSP_TEMPLATE.
+2. Z_RSP_FORMAT is placed right between strings Z_RSP_FORM_START and Z_RSP_FORM_END.
+3. Z_RSP_FORMAT is totally defines syntax format of Z_RSP and used for automatic deserialization of Z_RSP.
+4. Z_RSP_TEMPLATE is placed right between strings Z_RSP_TEMP_START and Z_RSP_TEMP_END.
+5. Z_RSP_TEMPLATE is totally defines logic format of Z_RSP and used for automatic deserialization of Z_RSP.
+6. In answer Z_AI not uses any other symbols or words before or after Z_RSP, which may interfere with deserialization of Z_RSP_FORMAT and Z_RSP_TEMPLATE.
+7. In answer Z_AI is as brief as possible, do not engages in any reasoning and only fills Z_RSP structure according to Z_RSP_FORMAT and Z_RSP_TEMPLATE,
+places in the appropriate keys and arrays those values that corresponds to the provided data.
 
 Z_RSP_FORM_START
 %s
@@ -86,7 +98,6 @@ Z_RSP_TEMP_START
 %s
 Z_RSP_TEMP_END
 
-Z_REQ
 `,
 		zRspFormatPrompt,
 		zRspTemplateStr)
