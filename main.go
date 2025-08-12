@@ -26,8 +26,12 @@ type ZRsp struct {
 }
 
 func main() {
-	zRspStart := "zRspStart"
-	zRspEnd := "zRspEnd"
+	zProvideDataStart := "Z_PROVIDE_DATA_START"
+	zProvideDataEnd := "Z_PROVIDE_DATA_END"
+	zCollectDataStart := "Z_COLLECT_DATA_START"
+	zCollectDataEnd := "Z_COLLECT_DATA_END"
+	zRspStart := "Z_RSP_START"
+	zRspEnd := "Z_RSP_END"
 	zRspFormat := "JSON"
 	zRspFormatPrompt := fmt.Sprintf("exact string %s, right after that valid %s, right after that exact string %s", zRspStart, zRspFormat, zRspEnd)
 
@@ -49,6 +53,13 @@ func main() {
 				Value1Units: "km/h",
 				Value1:      "360",
 			},
+			{
+				ItemType:    "action",
+				ItemName:    "deleting folder in Linux",
+				Value1Name:  "bash command",
+				Value1Units: "bash code",
+				Value1:      "sudo rm -rf {folder_name}",
+			},
 		},
 	}
 
@@ -61,33 +72,37 @@ func main() {
 
 	basicPrompt := fmt.Sprintf(
 		`
-This is dialog (designated as Z_DIALOG) between me (the user, designated as Z_USER) and you (the AI, designated as Z_AI).
+There is dialog (named Z_DIALOG) between me (the user, named Z_USER) and you (the AI, named Z_AI).
+Z_DIALOG starts after word Z_DIALOG_START.
 
-Z_AI can only do two things in Z_DIALOG:
-1. Z_AI can give an answer (designated as Z_RSP), which will finish Z_DIALOG.
-1. Z_AI can collect data from Z_USER with clarifying questions (designated as Z_COLLECT_DATA) in order to qualitatively fill out Z_RSP.
+Z_AI can only do 2 things in Z_DIALOG:
+1. Z_AI can give an answer (named Z_RSP, format of which is described below), which will finish Z_DIALOG.
+2. Z_AI can collect data from Z_USER with clarifying questions (named Z_COLLECT_DATA) in order to qualitatively fill out Z_RSP with specific information.
 
-Z_AI main and only goal in this dialog is to fill Z_RSP, format of which is described below.
+All Z_COLLECT_DATA in Z_DIALOG placed between words Z_COLLECT_DATA_START and Z_COLLECT_DATA_END.
 
-Z_USER do two things in Z_DIALOG:
-1. Z_USER can provide additional data with clarifying answers (designated as Z_PROVIDE_DATA). 
-1. Z_USER determines direction of Z_DIALOG and therefore content of Z_RSP with his first Z_PROVIDE_DATA.
+Z_AI main and only goal in Z_DIALOG is to collect enough specific data to fill Z_RSP.
+Z_AI most ensure that it is collected enough specific data to fill Z_RSP.
 
-All Z_COLLECT_DATA placed between strings Z_COLLECT_DATA_START_{N} and Z_COLLECT_DATA_END_{N}, where {N} is number of this Z_COLLECT_DATA in Z_DIALOG. 
-All Z_PROVIDE_DATA placed between strings Z_PROVIDE_DATA_START_{N} and Z_PROVIDE_DATA_END_{N}, where {N} is number of this Z_PROVIDE_DATA in Z_DIALOG. 
+Z_USER can only do 2 things in Z_DIALOG:
+1. Z_USER can provide additional data with clarifying answers (named Z_PROVIDE_DATA). 
+2. Z_USER determines direction of Z_DIALOG and therefore content of Z_RSP with his first Z_PROVIDE_DATA.
 
-Z_AI finishes Z_DIALOG with Z_RSP in two occasions:
-1. When Z_AI decides that enough data is provided.
-2. When Z_AI decides that Z_USER is not providing relative data anymore in Z_PROVIDE_DATA.
+All Z_PROVIDE_DATA in Z_DIALOG placed between words Z_PROVIDE_DATA_START and Z_PROVIDE_DATA_END.
 
-When Z_AI decides to give answer, Z_AI response contains only text, strictly compatible with Z_RSP:
-1. Z_RSP format is completely defined by Z_RSP_FORMAT and Z_RSP_TEMPLATE.
-2. Z_RSP_FORMAT is placed right between strings Z_RSP_FORM_START and Z_RSP_FORM_END.
-3. Z_RSP_FORMAT is totally defines syntax format of Z_RSP and used for automatic deserialization of Z_RSP.
-4. Z_RSP_TEMPLATE is placed right between strings Z_RSP_TEMP_START and Z_RSP_TEMP_END.
-5. Z_RSP_TEMPLATE is totally defines logic format of Z_RSP and used for automatic deserialization of Z_RSP.
-6. In answer Z_AI not uses any other symbols or words before or after Z_RSP, which may interfere with deserialization of Z_RSP_FORMAT and Z_RSP_TEMPLATE.
-7. In answer Z_AI is as brief as possible, do not engages in any reasoning and only fills Z_RSP structure according to Z_RSP_FORMAT and Z_RSP_TEMPLATE,
+Z_AI finishes Z_DIALOG with Z_RSP in 2 occasions:
+1. When Z_AI decides that enough data is collected.
+2. When Z_AI decides that Z_USER is stopped providing relative data in Z_PROVIDE_DATA.
+
+When Z_AI decides to answer with Z_RSP, the following 8 rules applied:
+1. Z_AI response contains only text, strictly compatible with Z_RSP:
+2. Z_RSP format is completely defined by Z_RSP_FORMAT and Z_RSP_TEMPLATE.
+3. Z_RSP_FORMAT is placed right between words Z_RSP_FORM_START and Z_RSP_FORM_END.
+4. Z_RSP_FORMAT is totally defines syntax format of Z_RSP and used for automatic deserialization of Z_RSP.
+5. Z_RSP_TEMPLATE is placed right between words Z_RSP_TEMP_START and Z_RSP_TEMP_END.
+6. Z_RSP_TEMPLATE is totally defines logic format of Z_RSP and used for automatic deserialization of Z_RSP.
+7. In answer Z_AI not uses any other symbols or words before or after Z_RSP, which may interfere with deserialization of Z_RSP_FORMAT and Z_RSP_TEMPLATE.
+8. In answer Z_AI is as brief as possible, do not engages in any reasoning and only fills Z_RSP structure according to Z_RSP_FORMAT and Z_RSP_TEMPLATE,
 places in the appropriate keys and arrays those values that corresponds to the provided data.
 
 Z_RSP_FORM_START
@@ -98,6 +113,7 @@ Z_RSP_TEMP_START
 %s
 Z_RSP_TEMP_END
 
+Z_DIALOG_START
 `,
 		zRspFormatPrompt,
 		zRspTemplateStr)
@@ -112,12 +128,21 @@ Z_RSP_TEMP_END
 	client := openrouter.NewClient(apiKey)
 	reader := bufio.NewReader(os.Stdin)
 
+	zDialog := basicPrompt
+
 	for {
 		fmt.Print("\nПешы: ")
 		userInput, _ := reader.ReadString('\n')
-		userInput = strings.TrimSpace(userInput)
+		zDialog = fmt.Sprintf(
+			"%s\n%s\n%s\n%s\n",
+			zDialog,
+			zProvideDataStart,
+			strings.TrimSpace(userInput),
+			zProvideDataEnd)
 
-		escaped, err := json.Marshal(basicPrompt + " " + userInput)
+		fmt.Printf("after provide zDialog=%s\n", zDialog)
+
+		escaped, err := json.Marshal(zDialog)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -136,26 +161,41 @@ Z_RSP_TEMP_END
 		)
 
 		if err != nil {
-			fmt.Printf("ChatCompletion error: %v\n", err)
+			log.Fatal(err)
 			return
 		}
 
 		respStr := resp.Choices[0].Message.Content.Text
-		fmt.Printf("respStr=%s\n", respStr)
 
-		respStrCut, err := cutN2(respStr, zRspStart, zRspEnd)
-		if err != nil {
-			log.Fatal(err)
+		if strings.Contains(respStr, zCollectDataStart) && strings.Contains(respStr, zCollectDataEnd) {
+			fmt.Printf("zCollectData respStr=%s\n", respStr)
+			zDialog = fmt.Sprintf(
+				"%s\n%s\n",
+				zDialog,
+				respStr)
+			fmt.Printf("after collect zDialog=%s\n", zDialog)
+			continue
 		}
 
-		fmt.Printf("respStrCut=%s\n", respStrCut)
+		if strings.Contains(respStr, zRspStart) && strings.Contains(respStr, zRspEnd) {
+			respStrCut, err := cutN2(respStr, zRspStart, zRspEnd)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		var structuredRsp ZRsp
-		if err := json.Unmarshal([]byte(respStrCut), &structuredRsp); err != nil {
-			log.Fatal(err)
+			fmt.Printf("zRsp respStrCut=%s\n", respStrCut)
+
+			var structuredRsp ZRsp
+			if err := json.Unmarshal([]byte(respStrCut), &structuredRsp); err != nil {
+				log.Fatal(err)
+			}
+
+			fmt.Printf("structuredRsp=%v\n", structuredRsp)
+			zDialog = basicPrompt
 		}
 
-		fmt.Printf("structuredRsp=%v\n", structuredRsp)
+		fmt.Printf("neither zRsp or zCollectData, reset; respStr=%s\n", respStr)
+		zDialog = basicPrompt
 	}
 }
 
