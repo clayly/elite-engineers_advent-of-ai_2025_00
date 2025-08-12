@@ -91,8 +91,7 @@ Z_USER can only do 2 things in Z_DIALOG:
 All Z_PROVIDE_DATA in Z_DIALOG placed between words Z_PROVIDE_DATA_START and Z_PROVIDE_DATA_END.
 
 Z_AI finishes Z_DIALOG with Z_RSP in 2 occasions:
-1. When Z_AI decides that enough data is collected.
-2. When Z_AI decides that Z_USER is stopped providing relative data in Z_PROVIDE_DATA.
+1. When Z_USER when the user clearly writes that he can't clarify anything more.
 
 When Z_AI decides to answer with Z_RSP, the following 8 rules applied:
 1. Z_AI response contains only text, strictly compatible with Z_RSP:
