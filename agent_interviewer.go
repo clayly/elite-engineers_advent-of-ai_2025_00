@@ -12,9 +12,6 @@ import (
 	"github.com/revrost/go-openrouter"
 )
 
-// AgentInterviewer orchestrates the dialog with the LLM and the user.
-// It mirrors the behavior from 1agent.go but exposes it as a reusable type
-// and collaborates with an injected AgentInspector to process structured results.
 type AgentInterviewer struct {
 	client    *openrouter.Client
 	reader    *bufio.Reader
@@ -28,12 +25,11 @@ type AgentInterviewer struct {
 	zRspEnd           string
 	zRspFormat        string
 	zRspFormatPrompt  string
+	sysPrompt         string
 	basicPrompt       string
 	zDialog           string
 }
 
-// NewAgentInterviewer constructs an AgentInterviewer. If client is nil,
-// it will be created using OPENROUTER_API_KEY from the environment.
 func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *AgentInterviewer {
 	if client == nil {
 		apiKey := os.Getenv("OPENROUTER_API_KEY")
@@ -46,7 +42,7 @@ func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *A
 		inspector = NewSimpleAgentInspector(client)
 	}
 
-	ai := &AgentInterviewer{
+	agent := &AgentInterviewer{
 		client:            client,
 		reader:            bufio.NewReader(os.Stdin),
 		inspector:         inspector,
@@ -60,8 +56,8 @@ func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *A
 	}
 
 	// Build prompts and template exactly like in 1agent.go
-	ai.zRspFormatPrompt = fmt.Sprintf("exact string %s, right after that valid %s, right after that exact string %s", ai.zRspStart, ai.zRspFormat, ai.zRspEnd)
-	fmt.Printf("zRspFormatPrompt=%s\n", ai.zRspFormatPrompt)
+	agent.zRspFormatPrompt = fmt.Sprintf("exact string %s, right after that valid %s, right after that exact string %s", agent.zRspStart, agent.zRspFormat, agent.zRspEnd)
+	fmt.Printf("zRspFormatPrompt=%s\n", agent.zRspFormatPrompt)
 
 	zRspTemplate := ZRsp{
 		Items: []ZRspItem{
@@ -76,7 +72,7 @@ func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *A
 	}
 	fmt.Printf("zRspTemplateStr=%s\n", string(zRspTemplateStr))
 
-	ai.basicPrompt = fmt.Sprintf(`
+	agent.basicPrompt = fmt.Sprintf(`
 There is dialog (named Z_DIALOG) between me (the user, named Z_USER) and you (the AI, named Z_AI).
 Z_DIALOG starts after word Z_DIALOG_START.
 
@@ -119,15 +115,17 @@ Z_RSP_TEMP_START
 Z_RSP_TEMP_END
 
 Z_DIALOG_START
-`, ai.zRspFormatPrompt, zRspTemplateStr)
+`, agent.zRspFormatPrompt, zRspTemplateStr)
 
-	fmt.Printf("basicPrompt=%s\n", ai.basicPrompt)
-	ai.zDialog = ai.basicPrompt
-	return ai
+	agent.sysPrompt = "You are an AI interviewer. Ensure you are collected all the needed data from user to give complete answer."
+
+	fmt.Printf("basicPrompt=%s\n", agent.basicPrompt)
+	agent.zDialog = agent.basicPrompt
+	return agent
 }
 
 // Run starts the interactive loop. It blocks until the context is cancelled or the process is terminated.
-func (ai *AgentInterviewer) Run(ctx context.Context) error {
+func (agent *AgentInterviewer) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -136,20 +134,21 @@ func (ai *AgentInterviewer) Run(ctx context.Context) error {
 		}
 
 		fmt.Print("\nПешы: ")
-		userInput, _ := ai.reader.ReadString('\n')
-		ai.zDialog = fmt.Sprintf("%s\n%s\n%s\n%s\n", ai.zDialog, ai.zProvideDataStart, strings.TrimSpace(userInput), ai.zProvideDataEnd)
-		fmt.Printf("after provide zDialog=%s\n", ai.zDialog)
+		userInput, _ := agent.reader.ReadString('\n')
+		agent.zDialog = fmt.Sprintf("%s\n%s\n%s\n%s\n", agent.zDialog, agent.zProvideDataStart, strings.TrimSpace(userInput), agent.zProvideDataEnd)
+		fmt.Printf("after provide zDialog=%s\n", agent.zDialog)
 
-		escaped, err := json.Marshal(ai.zDialog)
+		escaped, err := json.Marshal(agent.zDialog)
 		if err != nil {
 			return err
 		}
 
-		resp, err := ai.client.CreateChatCompletion(
+		resp, err := agent.client.CreateChatCompletion(
 			context.Background(),
 			openrouter.ChatCompletionRequest{
 				Model: "deepseek/deepseek-chat-v3-0324:free",
 				Messages: []openrouter.ChatCompletionMessage{
+					{Role: openrouter.ChatMessageRoleSystem, Content: openrouter.Content{Text: agent.sysPrompt}},
 					{Role: openrouter.ChatMessageRoleUser, Content: openrouter.Content{Text: string(escaped)}},
 				},
 			},
@@ -159,15 +158,15 @@ func (ai *AgentInterviewer) Run(ctx context.Context) error {
 		}
 
 		respStr := resp.Choices[0].Message.Content.Text
-		if strings.Contains(respStr, ai.zCollectDataStart) && strings.Contains(respStr, ai.zCollectDataEnd) {
+		if strings.Contains(respStr, agent.zCollectDataStart) && strings.Contains(respStr, agent.zCollectDataEnd) {
 			fmt.Printf("zCollectData respStr=%s\n", respStr)
-			ai.zDialog = fmt.Sprintf("%s\n%s\n", ai.zDialog, respStr)
-			fmt.Printf("after collect zDialog=%s\n", ai.zDialog)
+			agent.zDialog = fmt.Sprintf("%s\n%s\n", agent.zDialog, respStr)
+			fmt.Printf("after collect zDialog=%s\n", agent.zDialog)
 			continue
 		}
 
-		if strings.Contains(respStr, ai.zRspStart) && strings.Contains(respStr, ai.zRspEnd) {
-			respStrCut, err := cutN2(respStr, ai.zRspStart, ai.zRspEnd)
+		if strings.Contains(respStr, agent.zRspStart) && strings.Contains(respStr, agent.zRspEnd) {
+			respStrCut, err := cutN2(respStr, agent.zRspStart, agent.zRspEnd)
 			if err != nil {
 				return err
 			}
@@ -180,16 +179,16 @@ func (ai *AgentInterviewer) Run(ctx context.Context) error {
 			fmt.Printf("structuredRsp=%v\n", structuredRsp)
 
 			// Send to inspector and wait for inspection
-			if ai.inspector != nil {
-				if err := ai.inspector.Inspect(ctx, structuredRsp); err != nil {
+			if agent.inspector != nil {
+				if err := agent.inspector.Inspect(ctx, structuredRsp); err != nil {
 					return err
 				}
 			}
-			ai.zDialog = ai.basicPrompt
+			agent.zDialog = agent.basicPrompt
 		}
 
 		// Keep the same fallback/reset behavior as 1agent.go
 		fmt.Printf("neither zRsp or zCollectData, reset; respStr=%s\n", respStr)
-		ai.zDialog = ai.basicPrompt
+		agent.zDialog = agent.basicPrompt
 	}
 }
