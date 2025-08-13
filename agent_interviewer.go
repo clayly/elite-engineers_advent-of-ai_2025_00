@@ -35,15 +35,15 @@ type AgentInterviewer struct {
 // NewAgentInterviewer constructs an AgentInterviewer. If client is nil,
 // it will be created using OPENROUTER_API_KEY from the environment.
 func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *AgentInterviewer {
-	if inspector == nil {
-		inspector = &SimpleAgentInspector{}
-	}
 	if client == nil {
 		apiKey := os.Getenv("OPENROUTER_API_KEY")
 		if apiKey == "" {
 			log.Fatal("export OPENROUTER_API_KEY first")
 		}
 		client = openrouter.NewClient(apiKey)
+	}
+	if inspector == nil {
+		inspector = NewSimpleAgentInspector(client)
 	}
 
 	ai := &AgentInterviewer{

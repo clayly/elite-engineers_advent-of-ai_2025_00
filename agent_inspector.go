@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+
+	"github.com/revrost/go-openrouter"
 )
 
 // AgentInspector is responsible for inspecting structured ZRsp results
@@ -13,7 +17,22 @@ type AgentInspector interface {
 
 // SimpleAgentInspector is a minimal implementation that prints
 // the structured response and returns immediately.
-type SimpleAgentInspector struct{}
+type SimpleAgentInspector struct {
+	client *openrouter.Client
+}
+
+// NewSimpleAgentInspector constructs a SimpleAgentInspector. If client is nil,
+// it will be created using OPENROUTER_API_KEY from the environment.
+func NewSimpleAgentInspector(client *openrouter.Client) *SimpleAgentInspector {
+	if client == nil {
+		apiKey := os.Getenv("OPENROUTER_API_KEY")
+		if apiKey == "" {
+			log.Fatal("export OPENROUTER_API_KEY first")
+		}
+		client = openrouter.NewClient(apiKey)
+	}
+	return &SimpleAgentInspector{client: client}
+}
 
 func (s *SimpleAgentInspector) Inspect(ctx context.Context, resp ZRsp) error {
 	// In a real implementation, this could validate schema, persist,
