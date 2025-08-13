@@ -55,7 +55,7 @@ func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *A
 		zRspFormat:        "JSON",
 	}
 
-	// Build prompts and template exactly like in 1agent.go
+	// Build prompts and template exactly like in 1agent1user.go
 	agent.zRspFormatPrompt = fmt.Sprintf("exact string %s, right after that valid %s, right after that exact string %s", agent.zRspStart, agent.zRspFormat, agent.zRspEnd)
 	fmt.Printf("zRspFormatPrompt=%s\n", agent.zRspFormatPrompt)
 
@@ -187,7 +187,7 @@ func (agent *AgentInterviewer) Run(ctx context.Context) error {
 			agent.zDialog = agent.basicPrompt
 		}
 
-		// Keep the same fallback/reset behavior as 1agent.go
+		// Keep the same fallback/reset behavior as 1agent1user.go
 		fmt.Printf("neither zRsp or zCollectData, reset; respStr=%s\n", respStr)
 		agent.zDialog = agent.basicPrompt
 	}

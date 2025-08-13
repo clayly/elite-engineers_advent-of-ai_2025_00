@@ -2,17 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
 )
 
-func main() {
-	if err := StartAgents(context.Background()); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func StartAgents(ctx context.Context) error {
+func Run2Agents1User() error {
 	inspector := NewSimpleAgentInspector(nil)
 	interviewer := NewAgentInterviewer(nil, inspector)
-	return interviewer.Run(ctx)
+	return interviewer.Run(context.Background())
 }
