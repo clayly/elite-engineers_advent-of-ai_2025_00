@@ -185,6 +185,7 @@ func (agent *AgentInterviewer) Run(ctx context.Context) error {
 				}
 			}
 			agent.zDialog = agent.basicPrompt
+			continue
 		}
 
 		// Keep the same fallback/reset behavior as 1agent1user.go
