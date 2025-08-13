@@ -13,23 +13,23 @@ import (
 )
 
 // AgentInterviewer orchestrates the dialog with the LLM and the user.
-// It mirrors the behavior from main.go but exposes it as a reusable type
+// It mirrors the behavior from 1agent.go but exposes it as a reusable type
 // and collaborates with an injected AgentInspector to process structured results.
 type AgentInterviewer struct {
 	client    *openrouter.Client
 	reader    *bufio.Reader
 	inspector AgentInspector
 
-	zProvideDataStart  string
-	zProvideDataEnd    string
-	zCollectDataStart  string
-	zCollectDataEnd    string
-	zRspStart          string
-	zRspEnd            string
-	zRspFormat         string
-	zRspFormatPrompt   string
-	basicPrompt        string
-	zDialog            string
+	zProvideDataStart string
+	zProvideDataEnd   string
+	zCollectDataStart string
+	zCollectDataEnd   string
+	zRspStart         string
+	zRspEnd           string
+	zRspFormat        string
+	zRspFormatPrompt  string
+	basicPrompt       string
+	zDialog           string
 }
 
 // NewAgentInterviewer constructs an AgentInterviewer. If client is nil,
@@ -59,7 +59,7 @@ func NewAgentInterviewer(client *openrouter.Client, inspector AgentInspector) *A
 		zRspFormat:        "JSON",
 	}
 
-	// Build prompts and template exactly like in main.go
+	// Build prompts and template exactly like in 1agent.go
 	ai.zRspFormatPrompt = fmt.Sprintf("exact string %s, right after that valid %s, right after that exact string %s", ai.zRspStart, ai.zRspFormat, ai.zRspEnd)
 	fmt.Printf("zRspFormatPrompt=%s\n", ai.zRspFormatPrompt)
 
@@ -188,7 +188,7 @@ func (ai *AgentInterviewer) Run(ctx context.Context) error {
 			ai.zDialog = ai.basicPrompt
 		}
 
-		// Keep the same fallback/reset behavior as main.go
+		// Keep the same fallback/reset behavior as 1agent.go
 		fmt.Printf("neither zRsp or zCollectData, reset; respStr=%s\n", respStr)
 		ai.zDialog = ai.basicPrompt
 	}

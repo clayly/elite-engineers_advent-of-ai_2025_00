@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"log"
 )
 
-// StartAgents constructs an AgentInterviewer with an injected AgentInspector
-// and runs it. This keeps main.go unchanged; to use this orchestration,
-// call StartAgents from your own entrypoint or tests.
+func main() {
+	if err := StartAgents(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func StartAgents(ctx context.Context) error {
 	inspector := NewSimpleAgentInspector(nil)
 	interviewer := NewAgentInterviewer(nil, inspector)
