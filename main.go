@@ -79,14 +79,14 @@ Z_AI can only do 2 things in Z_DIALOG:
 1. Z_AI can give an answer (named Z_RSP, format of which is described below), which will finish Z_DIALOG.
 2. Z_AI can collect data from Z_USER with clarifying questions (named Z_COLLECT_DATA) in order to qualitatively fill out Z_RSP with specific information.
 
-All Z_COLLECT_DATA in Z_DIALOG placed between words Z_COLLECT_DATA_START and Z_COLLECT_DATA_END.
-
 Z_AI main and only goal in Z_DIALOG is to collect enough specific data to fill Z_RSP.
 Z_AI most ensure that it is collected enough specific data to fill Z_RSP.
 
 Z_USER can only do 2 things in Z_DIALOG:
 1. Z_USER can provide additional data with clarifying answers (named Z_PROVIDE_DATA). 
 2. Z_USER determines direction of Z_DIALOG and therefore content of Z_RSP with his first Z_PROVIDE_DATA.
+
+All Z_COLLECT_DATA in Z_DIALOG placed between words Z_COLLECT_DATA_START and Z_COLLECT_DATA_END.
 
 All Z_PROVIDE_DATA in Z_DIALOG placed between words Z_PROVIDE_DATA_START and Z_PROVIDE_DATA_END.
 
