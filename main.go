@@ -1,9 +1,11 @@
 package main
 
-import "log"
-
 func main() {
-	if err := Run2Agents1User(); err != nil {
-		log.Fatal(err)
-	}
+	//Run1Agent1User()
+
+	//if err := Run2Agents1User(); err != nil {
+	//	log.Fatal(err)
+	//}
+
+	RunMCPGitLab()
 }
