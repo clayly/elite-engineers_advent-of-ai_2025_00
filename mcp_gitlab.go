@@ -13,10 +13,15 @@ import (
 )
 
 func RunMCPGitLab() {
+	gitlabToken := os.Getenv("GITLAB_PERSONAL_ACCESS_TOKEN")
+	if gitlabToken == "" {
+		log.Fatal("export GITLAB_PERSONAL_ACCESS_TOKEN first")
+	}
+
 	// Launch the MCP GitLab server as a subprocess using Docker
 	// Assume Docker is installed and the image is pulled: docker pull mcp/gitlab
 	// Replace 'your_gitlab_token' with your actual GitLab token
-	cmd := exec.Command("docker", "run", "--rm", "-i", "-e", "GITLAB_PERSONAL_ACCESS_TOKEN=glpat-HYKLITxDWyyESNb49-dTsm86MQp1Onk5a3IK.01.100ipozxl", "mcp/gitlab")
+	cmd := exec.Command("docker", "run", "--rm", "-i", "-e", "GITLAB_PERSONAL_ACCESS_TOKEN="+gitlabToken, "mcp/gitlab")
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
