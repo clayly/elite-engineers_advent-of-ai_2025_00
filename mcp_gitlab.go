@@ -76,7 +76,7 @@ func RunMCPGitLab() {
 	searchArgs := struct {
 		Query string `json:"search"`
 	}{
-		Query: "vlc", // Replace with your search query
+		Query: "test-archiver", // Replace with your search query
 	}
 
 	response, err := client.CallTool(context.Background(), "search_repositories", searchArgs)
