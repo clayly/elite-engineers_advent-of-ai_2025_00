@@ -7,5 +7,7 @@ func main() {
 	//	log.Fatal(err)
 	//}
 
-	RunMCPGitLab()
+	//RunMCPGithub()
+
+	RunMCPGithubAndLlm()
 }
