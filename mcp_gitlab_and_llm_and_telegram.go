@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,13 +12,9 @@ import (
 	mcp "github.com/metoro-io/mcp-golang"
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"github.com/revrost/go-openrouter"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-//  There is my github notifications from guthub below. Print some short summary of it.
-
-func RunMCPGithubAndLlm() {
+func RunMCPGithubAndLlmAndTelegram() {
 	githubToken := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
 	if githubToken == "" {
 		log.Fatal("export GITHUB_PERSONAL_ACCESS_TOKEN first")
@@ -77,14 +72,6 @@ func RunMCPGithubAndLlm() {
 		cursor = tools.NextCursor
 	}
 
-	//toolName := "search_repositories"
-	//toolArgs := struct {
-	//	Query string `json:"query"`
-	//}{
-	//	Query: "test-archiver", // Replace with your search query
-	//}
-	//response, err := client.CallTool(context.Background(), toolName, toolArgs)
-
 	toolName := "list_notifications"
 	toolArgs := struct{}{}
 	mcpRsp, err := mcpClient.CallTool(context.Background(), toolName, toolArgs)
@@ -109,11 +96,7 @@ func RunMCPGithubAndLlm() {
 	}
 	llmClient := openrouter.NewClient(llmToken)
 
-	fmt.Print("\nПешы: ")
-	reader := bufio.NewReader(os.Stdin)
-	userInput, _ := reader.ReadString('\n')
-
-	llmReqStr := strings.TrimSpace(userInput) + "\n" + mspRspStr
+	llmReqStr := strings.TrimSpace("get summary of my github notifications from below") + "\n" + mspRspStr
 
 	llmReqStrEscaped, err := json.Marshal(llmReqStr)
 	if err != nil {
@@ -134,30 +117,8 @@ func RunMCPGithubAndLlm() {
 		log.Fatalf("llm err: %v", err)
 	}
 
-	fmt.Printf("llm rsp: %s\n", resp.Choices[0].Message.Content.Text)
+	respText := resp.Choices[0].Message.Content.Text
+	fmt.Printf("llm rsp: %s\n", respText)
 
-	// Replace with your bot token from BotFather
-	tgToken := os.Getenv("TELEGRAM_TOKEN")
-	if tgToken == "" {
-		log.Fatal("TELEGRAM_TOKEN environment variable not set")
-	}
-
-	// Replace with your own Telegram user ID
-	userID := int64(123456789) // <-- Change this to your actual user ID
-
-	bot, err := tgbotapi.NewBotAPI(tgToken)
-	if err != nil {
-		log.Fatalf("Error creating bot: %v", err)
-	}
-
-	message := "Hello from Go to my Saved Messages!"
-
-	msg := tgbotapi.NewMessage(userID, message)
-
-	_, err = bot.Send(msg)
-	if err != nil {
-		log.Fatalf("Error sending message: %v", err)
-	}
-
-	log.Println("Message sent to Saved Messages successfully!")
+	SendToTelegram(respText)
 }
