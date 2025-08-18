@@ -6,6 +6,6 @@ services:
     env_file: ".env"
     environment:
         - Z_HOURS=1
-        - Z_MINUTES=16
-        - Z_SECONDS=45
+        - Z_MINUTES=22
+        - Z_SECONDS=40
     restart: unless-stopped
