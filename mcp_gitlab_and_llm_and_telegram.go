@@ -7,12 +7,44 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 
 	mcp "github.com/metoro-io/mcp-golang"
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"github.com/revrost/go-openrouter"
 )
+
+var timerHour, _ = strconv.ParseInt(os.Getenv("Z_HOURS"), 10, 64)
+var timerMinute, _ = strconv.ParseInt(os.Getenv("Z_MINUTES"), 10, 64)
+var timerSecond, _ = strconv.ParseInt(os.Getenv("Z_SECONDS"), 10, 64)
+
+func nextRun() time.Duration {
+	now := time.Now()
+	y, m, d := now.Date()
+
+	next := time.Date(y, m, d, int(timerHour), int(timerMinute), int(timerSecond), 0, now.Location())
+	if !next.After(now) { // already passed today → tomorrow
+		next = next.Add(24 * time.Hour)
+	}
+	return next.Sub(now)
+}
+
+func RunMCPGithubAndLlmAndTelegramScheduled() {
+	for {
+		wait := nextRun()
+		log.Printf("next run in %v (%s)", wait, time.Now().Add(wait).Format(time.RFC3339))
+
+		// Instead of sleep we use a timer so we can stop it cleanly if needed.
+		t := time.NewTimer(wait)
+		<-t.C
+
+		// Run the job in its own goroutine so scheduling stays accurate
+		// even if the job itself is slow.
+		go RunMCPGithubAndLlmAndTelegram()
+	}
+}
 
 func RunMCPGithubAndLlmAndTelegram() {
 	githubToken := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")

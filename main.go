@@ -9,9 +9,11 @@ func main() {
 
 	//RunMCPGithub()
 
-	// RunMCPGithubAndLlm()
+	//RunMCPGithubAndLlm()
 
-	// SendToTelegram("Hello from Go to my Saved Messages!")
+	//SendToTelegram("Hello from Go to my Saved Messages!")
 
-	RunMCPGithubAndLlmAndTelegram()
+	//RunMCPGithubAndLlmAndTelegram()
+
+	RunMCPGithubAndLlmAndTelegramScheduled()
 }
