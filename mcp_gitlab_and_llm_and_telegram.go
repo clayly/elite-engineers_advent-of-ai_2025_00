@@ -138,7 +138,8 @@ func RunMCPGithubAndLlmAndTelegram() {
 	resp, err := llmClient.CreateChatCompletion(
 		context.Background(),
 		openrouter.ChatCompletionRequest{
-			Model: "deepseek/deepseek-chat-v3-0324:free",
+			//Model: "deepseek/deepseek-chat-v3-0324:free",
+			Model: "qwen/qwen3-coder:free",
 			Messages: []openrouter.ChatCompletionMessage{
 				{Role: openrouter.ChatMessageRoleUser, Content: openrouter.Content{Text: string(llmReqStrEscaped)}},
 			},
