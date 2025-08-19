@@ -15,5 +15,7 @@ func main() {
 
 	//RunMCPGithubAndLlmAndTelegram()
 
-	RunMCPGithubAndLlmAndTelegramScheduled()
+	// RunMCPGithubAndLlmAndTelegramScheduled()
+
+	Run2MCP()
 }
