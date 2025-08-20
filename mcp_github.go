@@ -70,14 +70,6 @@ func RunMCPGithub() {
 		cursor = tools.NextCursor
 	}
 
-	//toolName := "search_repositories"
-	//toolArgs := struct {
-	//	Query string `json:"query"`
-	//}{
-	//	Query: "test-archiver", // Replace with your search query
-	//}
-	//response, err := client.CallTool(context.Background(), toolName, toolArgs)
-
 	toolName := "list_notifications"
 	toolArgs := struct{}{}
 	response, err := client.CallTool(context.Background(), toolName, toolArgs)
