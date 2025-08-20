@@ -19,5 +19,7 @@ func main() {
 
 	//Run2MCP()
 
-	RunDockerBuild()
+	//RunDockerBuild()
+
+	Run1Agent1UserTest()
 }

@@ -1,23 +1,19 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/revrost/go-openrouter"
 )
 
 func Run1Agent1UserTest() {
-	zProvideDataStart := "Z_PROVIDE_DATA_START"
-	zProvideDataEnd := "Z_PROVIDE_DATA_END"
-	zCollectDataStart := "Z_COLLECT_DATA_START"
-	zCollectDataEnd := "Z_COLLECT_DATA_END"
 	zRspStart := "Z_RSP_START"
 	zRspEnd := "Z_RSP_END"
 	zRspFormat := "python code"
@@ -25,44 +21,42 @@ func Run1Agent1UserTest() {
 
 	fmt.Printf("zRspFormatPrompt=%s\n", zRspFormatPrompt)
 
-	basicPrompt := fmt.Sprintf(
+	llmSystemPrompt := fmt.Sprintf(
 		`
-There is dialog (named Z_DIALOG) between me (the user, named Z_USER) and you (the AI, named Z_AI).
-Z_DIALOG starts after word Z_DIALOG_START.
+You are coding assistant (named Z_AI).
 
-Z_AI can only do 2 things in Z_DIALOG:
-1. Z_AI can give an answer (named Z_RSP, format of which is described below), which will finish Z_DIALOG.
-2. Z_AI can collect data from Z_USER with clarifying questions (named Z_COLLECT_DATA) in order to qualitatively fill out Z_RSP with specific information.
+Z_AI can only do 1 thing: give an answer (named Z_RSP, format of which is described below), which will finish Z_DIALOG.
 
-Z_AI main and only goal in Z_DIALOG is to collect enough specific data to fill Z_RSP.
-Z_AI most ensure that it is collected enough specific data to fill Z_RSP.
+Z_AI response contains only text, strictly compatible with Z_RSP.
 
-Z_USER can only do 2 things in Z_DIALOG:
-1. Z_USER can provide additional data with clarifying answers (named Z_PROVIDE_DATA). 
-2. Z_USER determines direction of Z_DIALOG and therefore content of Z_RSP with his first Z_PROVIDE_DATA.
+Z_RSP format is completely defined by Z_RSP_FORMAT.
 
-All Z_COLLECT_DATA in Z_DIALOG placed between words Z_COLLECT_DATA_START and Z_COLLECT_DATA_END.
-
-All Z_PROVIDE_DATA in Z_DIALOG placed between words Z_PROVIDE_DATA_START and Z_PROVIDE_DATA_END.
-
-Z_AI finishes Z_DIALOG with Z_RSP in 2 occasions:
-1. When Z_USER when the user clearly writes that he can't provide more data.
-2. When Z_USER is stopped providing relative data in Z_PROVIDE_DATA.
-
-When Z_AI decides to answer with Z_RSP, the following 3 rules applied:
-1. Z_AI response contains only text, strictly compatible with Z_RSP:
-2. Z_RSP format is completely defined by Z_RSP_FORMAT.
-3. Z_RSP_FORMAT is placed right between words Z_RSP_FORM_START and Z_RSP_FORM_END.
+Z_RSP_FORMAT is placed right between words Z_RSP_FORM_START and Z_RSP_FORM_END.
 
 Z_RSP_FORM_START
 %s
 Z_RSP_FORM_END
-
-Z_DIALOG_START
 `,
 		zRspFormatPrompt)
 
-	fmt.Printf("basicPrompt=%s\n", basicPrompt)
+	llmSystemPromptEscaped, err := json.Marshal(llmSystemPrompt)
+	if err != nil {
+		log.Fatalf("failed to marshal text tp json string: %v", err)
+	}
+
+	fmt.Printf("basicPrompt=%s\n", llmSystemPrompt)
+
+	codeToTest, err := readFileToString("function_python.py")
+	if err != nil {
+		log.Fatalf("failed to read code: %v", err)
+	}
+
+	llmUserPromptStr := strings.TrimSpace("write test for the python code below") + "\n" + codeToTest
+
+	llmUserPromptEscaped, err := json.Marshal(llmUserPromptStr)
+	if err != nil {
+		log.Fatalf("failed to marshal text tp json string: %v", err)
+	}
 
 	llmToken := os.Getenv("OPENROUTER_API_KEY")
 	if llmToken == "" {
@@ -70,24 +64,21 @@ Z_DIALOG_START
 	}
 	llmClient := openrouter.NewClient(llmToken)
 
-	codeToTest, err := readFileToString("python-function.py")
-	if err != nil {
-		log.Fatalf("failed to read code: %v", err)
-	}
-	llmReqStr := basicPrompt + "\n" + strings.TrimSpace("write test for the python code below") + "\n" + codeToTest
-
-	llmReqStrEscaped, err := json.Marshal(llmReqStr)
-	if err != nil {
-		log.Fatalf("failed to marshal text tp json string: %v", err)
-	}
-
 	resp, err := llmClient.CreateChatCompletion(
 		context.Background(),
 		openrouter.ChatCompletionRequest{
+			Model: "moonshotai/kimi-k2:free",
 			//Model: "deepseek/deepseek-chat-v3-0324:free",
-			Model: "qwen/qwen3-coder:free",
+			//Model: "qwen/qwen3-coder:free",
 			Messages: []openrouter.ChatCompletionMessage{
-				{Role: openrouter.ChatMessageRoleUser, Content: openrouter.Content{Text: string(llmReqStrEscaped)}},
+				{
+					Role:    openrouter.ChatMessageRoleSystem,
+					Content: openrouter.Content{Text: string(llmSystemPromptEscaped)},
+				},
+				{
+					Role:    openrouter.ChatMessageRoleUser,
+					Content: openrouter.Content{Text: string(llmUserPromptEscaped)},
+				},
 			},
 		},
 	)
@@ -96,10 +87,41 @@ Z_DIALOG_START
 		log.Fatalf("llm err: %v", err)
 	}
 
-	respText := resp.Choices[0].Message.Content.Text
-	fmt.Printf("llm rsp: %s\n", respText)
+	respStr := resp.Choices[0].Message.Content.Text
+	fmt.Printf("llm rsp: %s\n", respStr)
 
-	writeStringToFile("python-test.py", respText)
+	codeOfTest, err := cutN2(respStr, zRspStart, zRspEnd)
+	if err != nil {
+		log.Fatalf("cur codeOfTest err: %v", err)
+	}
+
+	err = writeStringToFile("tmp/test_python.py", codeOfTest)
+	if err != nil {
+		log.Printf("ошибка записи файла с тестом: %v", err)
+	}
+
+	cmd := exec.Command(
+		"docker",
+		"build",
+		"--progress=plain",
+		"--no-cache",
+		"-t",
+		"advent-pytest",
+		".",
+		"--file",
+		"Dockerfile-pytest",
+	)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("Failed to start docker container: %v", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		log.Fatalf("Failed to wait for docker container: %v", err)
+	}
 }
 
 func readFileToString(path string) (string, error) {
