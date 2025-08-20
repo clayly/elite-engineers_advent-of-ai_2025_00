@@ -25,9 +25,9 @@ func Run1Agent1UserTest() {
 		`
 You are coding assistant (named Z_AI).
 
-Z_AI can only do 1 thing: give an answer (named Z_RSP, format of which is described below), which will finish Z_DIALOG.
+Z_AI can only give an answer (named Z_RSP, format of which is described below).
 
-Z_AI response contains only text, strictly compatible with Z_RSP.
+Z_AI answer contains only text, strictly compatible with Z_RSP.
 
 Z_RSP format is completely defined by Z_RSP_FORMAT.
 
